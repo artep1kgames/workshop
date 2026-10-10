@@ -1,0 +1,89 @@
+{% extends "workplace/base.html" %}
+
+{% load workplace_tags %}
+
+{% block title %}Редактирование чека №{{ receipt.id }}{% endblock %}
+
+{% block content %}
+<main class="page">
+    <header class="page-header">
+        <div>
+            <h1>Редактирование чека №{{ receipt.number }}</h1>
+            <p>Дата: {{ receipt.report.date|date:"d.m.Y" }}</p>
+        </div>
+        <a class="back-link" href="{% url 'index' %}">Назад</a>
+    </header>
+
+    <form method="post" data-confirm="edit">
+        {% csrf_token %}
+
+        {% for product in products %}
+            <section class="product-card receipt-product">
+                <h2>{{ product.name }}</h2>
+
+                {% for variant in product.variants.all %}
+                    {% if variant.is_active %}
+                        <div class="variant-row">
+                            <div class="variant-info">
+                                <strong>{{ variant.name }}</strong>
+                                <span>Цена: {{ variant.price|floatformat:2 }}</span>
+                            </div>
+
+                            <div class="quantity-control">
+                                <button type="button" class="quantity-button minus">−</button>
+                                <input
+                                    type="number"
+                                    name="quantity_{{ variant.id }}"
+                                    value="{{ quantities|get_item:variant.id|default:0 }}"
+                                    min="0"
+                                    step="1"
+                                    class="quantity-input"
+                                >
+                                <button type="button" class="quantity-button plus">+</button>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </section>
+        {% empty %}
+            <p class="empty-message">Нет активных товаров.</p>
+        {% endfor %}
+
+        <div class="payment-method">
+            <label>Способ оплаты</label>
+            <div class="payment-options">
+                <label class="payment-option">
+                    <input type="radio" name="payment_method" value="cash"
+                        {% if receipt.payment_method == "cash" %}checked{% endif %}>
+                    <span>💵 Наличными</span>
+                </label>
+
+                <label class="payment-option">
+                    <input type="radio" name="payment_method" value="cashless"
+                        {% if receipt.payment_method == "cashless" %}checked{% endif %}>
+                    <span>💳 Безналичными</span>
+                </label>
+            </div>
+        </div>
+        <button type="submit" class="primary-button">
+            Сохранить изменения
+        </button>
+    </form>
+</main>
+
+<script>
+document.addEventListener("click", function (event) {
+    const button = event.target.closest(".quantity-button");
+
+    if (!button) return;
+
+    const control = button.closest(".quantity-control");
+    const input = control.querySelector(".quantity-input");
+    const value = parseInt(input.value, 10) || 0;
+
+    input.value = button.classList.contains("plus")
+        ? value + 1
+        : Math.max(0, value - 1);
+});
+</script>
+{% endblock %}

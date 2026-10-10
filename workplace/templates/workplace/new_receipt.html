@@ -1,0 +1,139 @@
+
+{% extends "workplace/base.html" %}
+
+{% block title %}Новый чек{% endblock %}
+
+{% block content %}
+<main class="page">
+    <header class="page-header">
+        <div>
+            <h1>Новый чек</h1>
+            <p>Дата: {{ report.date|date:"d.m.Y" }}</p>
+        </div>
+        <a class="back-link" href="{% url 'index' %}">Назад</a>
+    </header>
+
+    <form method="post" action="{% url 'create_receipt' %}"
+        data-confirm="receipt">
+        {% csrf_token %}
+        <input type="hidden" name="submission_token" value="{{ submission_token }}">
+
+        {% for product in products %}
+            <section class="product-card receipt-product">
+                <h2>{{ product.name }}</h2>
+
+                {% for variant in product.variants.all %}
+                    {% if variant.is_active %}
+                        <div class="variant-row">
+                            <div class="variant-info">
+                                <strong>{{ variant.name }}</strong>
+                                <span>Цена: {{ variant.price|floatformat:2 }}</span>
+                            </div>
+
+                            <div class="quantity-control">
+                                <button type="button" class="quantity-button minus" aria-label="Уменьшить количество">−</button>
+                                <input
+                                    type="number"
+                                    name="quantity_{{ variant.id }}"
+                                    value="0"
+                                    min="0"
+                                    step="1"
+                                    inputmode="numeric"
+                                    class="quantity-input"
+                                >
+                                <button type="button" class="quantity-button plus" aria-label="Увеличить количество">+</button>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </section>
+        {% empty %}
+            <p class="empty-message">
+                Сначала добавь товары и варианты в административной панели.
+            </p>
+        {% endfor %}
+            <div class="checkout-total">
+                <span>Итого к оплате:</span>
+                <strong id="checkout-total">0.00 ₽</strong>
+            </div>
+            <div class="payment-method">
+            <label for="payment_method">Способ оплаты</label>
+            <div class="payment-options">
+                <label class="payment-option">
+                    <input type="radio" name="payment_method" value="cash" checked>
+                    <span>💵 Наличными</span>
+                </label>
+
+                <label class="payment-option">
+                    <input type="radio" name="payment_method" value="cashless">
+                    <span>💳 Безналичными</span>
+                </label>
+            </div>
+        </div>
+        {% if products %}
+            <button class="primary-button" type="submit">
+                Подтвердить и сохранить чек
+            </button>
+        {% endif %}
+    </form>
+</main>
+<script>
+function updateCheckoutTotal() {
+    let total = 0;
+
+    document.querySelectorAll(".variant-row").forEach((row) => {
+        const input = row.querySelector(".quantity-input");
+        const priceElement = row.querySelector(".variant-info span");
+
+        if (!input || !priceElement) {
+            return;
+        }
+
+        const price = parseFloat(
+            priceElement.textContent
+                .replace("Цена:", "")
+                .replace(/\s/g, "")
+                .replace(",", ".")
+        ) || 0;
+
+        const quantity = Math.max(0, parseInt(input.value, 10) || 0);
+
+        total += price * quantity;
+    });
+
+    document.getElementById("checkout-total").textContent =
+        total.toLocaleString("ru-RU", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }) + " ₽";
+}
+
+document.querySelectorAll(".quantity-input").forEach((input) => {
+    input.addEventListener("input", updateCheckoutTotal);
+    input.addEventListener("change", updateCheckoutTotal);
+});
+
+document.addEventListener("click", (event) => {
+    const button = event.target.closest(".quantity-button");
+
+    if (!button) {
+        return;
+    }
+
+    const control = button.closest(".quantity-control");
+    const input = control.querySelector(".quantity-input");
+    const currentValue = parseInt(input.value, 10) || 0;
+
+    if (button.classList.contains("plus")) {
+        input.value = currentValue + 1;
+    } else if (button.classList.contains("minus")) {
+        input.value = Math.max(0, currentValue - 1);
+    }
+
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+});
+
+updateCheckoutTotal();
+</script>
+{% endblock %}

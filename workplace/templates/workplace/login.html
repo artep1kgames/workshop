@@ -1,0 +1,49 @@
+
+{% extends "workplace/base.html" %}
+
+{% block title %}Вход в систему{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+    <form class="auth-card" method="post">
+        {% csrf_token %}
+
+        <div class="brand-mark">У</div>
+        <h1>Учёт позиций</h1>
+        <p class="muted">Войдите в свой аккаунт</p>
+
+        {% if form.errors %}
+            <div class="error-message">
+                Неверный логин или пароль.
+            </div>
+        {% endif %}
+
+        <label for="id_username">Логин</label>
+        <input
+            type="text"
+            name="username"
+            id="id_username"
+            autocomplete="username"
+            required
+            autofocus
+        >
+
+        <label for="id_password">Пароль</label>
+        <input
+            type="password"
+            name="password"
+            id="id_password"
+            autocomplete="current-password"
+            required
+        >
+
+        {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+
+        <button class="primary-button full-button" type="submit">
+            Войти
+        </button>
+    </form>
+</main>
+{% endblock %}

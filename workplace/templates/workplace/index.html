@@ -1,0 +1,133 @@
+{% extends "workplace/base.html" %}
+
+{% block title %}Дневной отчёт{% endblock %}
+
+{% block content %}
+<main class="page">
+    <header class="page-header">
+        <div>
+            <h1>Дневной отчёт</h1>
+            <p>{{ report.date|date:"d.m.Y" }}</p>
+        </div>
+
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="logout-button">Выйти</button>
+        </form>
+    </header>
+
+    <section class="summary">
+        <div class="summary-card">
+            <span>Чеков</span>
+            <strong>{{ receipt_count }}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Всего единиц</span>
+            <strong>{{ total_quantity }}</strong>
+        </div>
+
+        <div class="summary-card summary-wide">
+            <span>Общая сумма</span>
+            <strong>{{ total_amount|floatformat:2 }} ₽</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Наличными</span>
+            <strong>{{ cash_amount|floatformat:2 }} ₽</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Безналичными</span>
+            <strong>{{ cashless_amount|floatformat:2 }} ₽</strong>
+        </div>
+    </section>
+
+    {% if report.is_closed %}
+        <section class="day-status closed-status">
+            <h2>День завершён</h2>
+            <p>Новые чеки за эту дату создавать нельзя.</p>
+            {% if report.closed_at %}
+                <p>Закрыт: {{ report.closed_at|date:"d.m.Y H:i" }}</p>
+            {% endif %}
+            {% if report.closed_by %}
+                <p>Пользователь: {{ report.closed_by }}</p>
+            {% endif %}
+
+            {% if user.is_staff %}
+                <form method="post"
+                    action="{% url 'reopen_day' %}"
+                    data-confirm="reopen">
+                    {% csrf_token %}
+                    <button type="submit" class="primary-button">
+                        Повторно открыть день
+                    </button>
+                </form>
+            {% endif %}
+        </section>
+    {% else %}
+        <div class="main-actions">
+            <a class="primary-button" href="{% url 'new_receipt' %}">
+                + Новый чек
+            </a>
+
+            
+            
+            <form method="post" action="{% url 'close_day' %}"
+                data-date="{{ report.date|date:'d.m.Y' }}"
+                data-confirm="close">
+                {% csrf_token %}
+                <button type="submit" class="danger-button">
+                    Завершить день
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+    <section class="receipts-section">
+        <h2>Чеки за день</h2>
+
+        {% for receipt in receipts %}
+            <article class="product-card receipt-card">
+                <header class="receipt-header">
+                    <div>
+                        <h3>Чек №{{ receipt.number }}</h3>
+                        <span>{{ receipt.created_at|date:"H:i:s" }}</span>
+                    </div>
+                    <strong>{{ receipt.total|floatformat:2 }} ₽</strong>
+                </header>
+
+                <p class="receipt-author">
+                    Оплата: {{ receipt.get_payment_method_display }}
+                </p>
+
+                <div class="receipt-items">
+                    {% for item in receipt.items.all %}
+                        <div class="receipt-item">
+                            <span>
+                                {{ item.variant.product.name }} — {{ item.variant.name }}
+                                × {{ item.quantity }}
+                            </span>
+                            <strong>{{ item.total|floatformat:2 }} ₽</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if receipt.created_by %}
+                    <p class="receipt-author">
+                        Создал: {{ receipt.created_by }}
+                    </p>
+                {% endif %}
+
+                {% if not report.is_closed %}
+                    <a class="back-link" href="{% url 'edit_receipt' receipt.id %}">
+                        Редактировать чек №{{ receipt.number }}
+                    </a>
+                {% endif %}
+            </article>
+        {% empty %}
+            <p class="empty-message">За сегодня чеков пока нет.</p>
+        {% endfor %}
+    </section>
+</main>
+{% endblock %}

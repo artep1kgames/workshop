@@ -1,0 +1,115 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#172c4b">
+    <title>{% block title %}Учёт позиций{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'workplace/style.css' %}">
+</head>
+<body>
+    {% block content %}{% endblock %}
+    <dialog id="confirm-dialog" class="confirm-dialog">
+    <div class="confirm-content">
+        <div class="confirm-icon">!</div>
+        <h2 id="confirm-title">Подтверждение действия</h2>
+        <p id="confirm-message"></p>
+        <div class="confirm-actions">
+            <button type="button" id="confirm-cancel" class="back-link">
+                Отмена
+            </button>
+            <button type="button" id="confirm-accept" class="primary-button">
+                Подтвердить
+            </button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const dialog = document.getElementById("confirm-dialog");
+    const title = document.getElementById("confirm-title");
+    const message = document.getElementById("confirm-message");
+    const cancel = document.getElementById("confirm-cancel");
+    const accept = document.getElementById("confirm-accept");
+
+    let activeForm = null;
+    let approved = false;
+
+    const texts = {
+        receipt: {
+            title: "Сохранить чек?",
+            message: "Проверь количество товаров. После подтверждения чек попадёт в дневной отчёт.",
+            button: "Сохранить чек"
+        },
+        close: {
+            title: "Завершить день?",
+            message: "После закрытия новые чеки за этот день создавать будет нельзя. Продолжить?",
+            button: "Завершить день"
+        },
+        reopen: {
+            title: "Повторно открыть день?",
+            message: "Создание чеков за эту дату снова станет доступно. Продолжить?",
+            button: "Открыть день"
+        }
+    };
+
+    document.addEventListener("submit", function (event) {
+        const form = event.target;
+
+        if (!form.matches("form[data-confirm]")) {
+            return;
+        }
+
+        if (approved && activeForm === form) {
+            approved = false;
+            activeForm = null;
+            return;
+        }
+
+        event.preventDefault();
+
+        const type = form.dataset.confirm;
+        const text = texts[type];
+
+        if (!text) {
+            return;
+        }
+
+        activeForm = form;
+        title.textContent = text.title;
+        message.textContent = text.message;
+        accept.textContent = text.button;
+        dialog.showModal();
+    });
+
+    cancel.addEventListener("click", function () {
+        dialog.close();
+        activeForm = null;
+        approved = false;
+    });
+
+    accept.addEventListener("click", function () {
+        if (!activeForm) {
+            return;
+        }
+
+        const form = activeForm;
+        dialog.close();
+        approved = true;
+        form.requestSubmit();
+    });
+
+    dialog.addEventListener("click", function (event) {
+        if (event.target === dialog) {
+            dialog.close();
+            activeForm = null;
+            approved = false;
+        }
+    });
+});
+</script>
+</body>
+</html>
